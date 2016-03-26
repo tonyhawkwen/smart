@@ -5,7 +5,7 @@ PROJECT (Stone)
 INCLUDE(FindPkgConfig)
 
 PKG_CHECK_MODULES(PKGS REQUIRED
-#				  libevent
+				  libev
 				  libgflags
 #				  hiredis
 				  )
@@ -14,10 +14,12 @@ PKG_CHECK_MODULES(PKGS REQUIRED
 #INCLUDE_DIRECTORIES(${PKGS_INCLUDE_DIRS})
 
 
-INCLUDE_DIRECTORIES(public)
+INCLUDE_DIRECTORIES(public
+                    core)
 
 
-SET(SRC_LIST server.cpp)
+SET(SRC_LIST core/loop.cpp
+             server.cpp)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++11 -pthread")
 ADD_DEFINITIONS(-DELPP_THREAD_SAFE)

@@ -3,13 +3,16 @@
 #include "logging.h"
 
 DEFINE_string(log_path, "./conf/log.conf", "log conf");
+DECLARE_string(log_path);
+
+INITIALIZE_EASYLOGGINGPP
 
 bool gExitServer = false;
 
 void signal_quit(int signo)
 {
     //here write need catch signal
-    LOG(FATAL) <<"signal " << signo <<" caught, search server will quit";
+    SLOG(FATAL) <<"signal " << signo <<" caught, search server will quit";
     gExitServer = true;
 }
 
@@ -24,6 +27,12 @@ bool global_init()
 {
 
     return true;
+}
+
+void init_logging() {
+    el::Loggers::configureFromGlobal(FLAGS_log_path);
+    el::Loggers::addFlag(el::LoggingFlag::DisableApplicationAbortOnFatalLog);
+    el::Loggers::addFlag(el::LoggingFlag::MultiLoggerSupport);
 }
 
 int main(int argc, char** argv) {
