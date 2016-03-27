@@ -1,9 +1,9 @@
 #include <iostream>
 #include <gflags/gflags.h>
 #include "logging.h"
+#include "tcp_service.h"
 
 DEFINE_string(log_path, "./conf/log.conf", "log conf");
-DECLARE_string(log_path);
 
 INITIALIZE_EASYLOGGINGPP
 
@@ -43,6 +43,15 @@ int main(int argc, char** argv) {
         std::cout << "global init fail!" << std::endl;
         return -1;
     }
+
+    smart::TcpService service;
+    service.run();
+
+    while (!gExitServer) {
+        sleep(1);
+    }
+
+    service.stop();
 
     return 0;
 }

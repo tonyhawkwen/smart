@@ -10,8 +10,7 @@ class Loop;
 class IO {
 public:
     friend class Loop;
-
-    typedef std::function<void()> EventCallback;
+    using EventCallback = std::function<void()>;
 
     IO() : _fd(-1), _index(-1), _events(0), _revents(0) {}
     IO(int fd, int events) : _fd(fd), _index(-1), _events(events), _revents(0) {}
@@ -23,9 +22,6 @@ public:
     void set_fd(int fd) { _fd = fd; }
     int events() { return _events; }
     void set_events(int events) { _events = events; }
-
-    static const size_t READ;
-    static const size_t WRITE;
 
 private:
     void handle_event(int revents);

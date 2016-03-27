@@ -1,0 +1,40 @@
+#ifndef SERVICE_TCP_CONNECTION_H
+#define SERVICE_TCP_CONNECTION_H
+
+#include <vector>
+#include <memory>
+#include "io.h"
+#include "mpmc_queue.hpp"
+#include "inet_address.h"
+
+struct ConnectionInfo {
+    int conn_fd;
+    InetAddress inet_addr;
+};
+
+using SharedQueue = std::shared_ptr<MPMCQueue<ConnectionInfo>>;
+
+class TcpReader : public Service {
+    public:
+        TcpReader(int fd, SharedQueue& infos);
+        virtual ~TcpReader();
+    protected:
+        bool prepare() override;
+
+    private:
+        std::shared_ptr<IO> _queue_read_io;
+        SharedQueue _infos;
+};
+
+class TcpConnection {
+    public:
+        TcpConnection();
+        ~TcpConnection();
+
+    private:
+        std::shared_ptr<IO> _queue_write_io;
+        std::vector<TcpReader> _read_pool;
+        SharedQueue _infos;
+};
+
+#endif /*SERVICE_TCP_CONNECTION_H*/

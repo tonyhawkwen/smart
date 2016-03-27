@@ -11,14 +11,18 @@ PKG_CHECK_MODULES(PKGS REQUIRED
 				  )
 
 
-#INCLUDE_DIRECTORIES(${PKGS_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${PKGS_INCLUDE_DIRS})
 
 
 INCLUDE_DIRECTORIES(public
-                    core)
+                    core
+                    service)
 
 
-SET(SRC_LIST core/loop.cpp
+SET(SRC_LIST public/sockets.cpp
+             core/loop.cpp
+             core/service.cpp
+             service/tcp_service.cpp
              server.cpp)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++11 -pthread")

@@ -16,8 +16,6 @@ std::shared_ptr<Loop> get_local_loop()
     return s_local_loop;
 }
 
-const size_t IO::READ = EV_READ;
-const size_t IO::WRITE = EV_WRITE;
 void IO::handle_event(int revents)
 {
     if (revents & EV_READ) {
@@ -43,10 +41,8 @@ Loop::~Loop()
             && nullptr != _loop) {
 
         SLOG(INFO) << "quit now!";
-        ev_break(_loop, EVBREAK_ALL);
+        ev_loop_destroy(_loop);
     }
-
-    ev_loop_destroy(_loop);
 }
 
 void Loop::ev_io_common_cb(struct ev_loop* loop, struct ev_io* w, int revents)
@@ -58,6 +54,12 @@ void Loop::ev_io_common_cb(struct ev_loop* loop, struct ev_io* w, int revents)
     }
 }
 
+void Loop::ev_async_cb(struct ev_loop* loop, struct ev_async* w, int revents)
+{
+    SLOG(INFO) << "break loop";
+    ev_break(loop);
+}
+
 bool Loop::init()
 {
     SLOG(INFO) << "init loop begin...";
@@ -66,11 +68,14 @@ bool Loop::init()
         return true;
     }
 
-    _loop = ev_loop_new(EVFLAG_AUTO);
+    _loop = ev_loop_new(EVBACKEND_EPOLL | EVFLAG_NOENV);
     if (_loop == nullptr) {
         SLOG(FATAL) << "create loop fail!";
         throw_system_error("create loop fail");
     }
+
+    ev_async_init(&_async, ev_async_cb);
+    ev_async_start(_loop, &_async);
 
     return true;
 }
@@ -177,6 +182,19 @@ bool Loop::restart_io(std::shared_ptr<IO>& io)
     auto &one_io = _ios[io->index()];
     ev_io_start(_loop, &one_io.eio);
     return true;
+}
+
+void Loop::quit()
+{
+    _quit = true;
+    if (nullptr != _loop) {
+        if (std::this_thread::get_id() == _owner) {
+            ev_break(_loop);
+        } else {
+            SLOG(INFO) << "quit async!";
+            ev_async_send(_loop, &_async);       
+        }
+    }   
 }
 
 }

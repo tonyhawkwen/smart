@@ -1,0 +1,39 @@
+#include "tcp_connection.h"
+#include <sys/eventfd.h>
+#include "loop.h"
+#include "logging.h"
+
+TcpReader::TcpReader(int fd, SharedQueue& infos):
+    _queue_read_io(new IO(fd, EV_READ)),
+    _infos(infos)
+{
+}
+
+TcpReader::~TcpReader()
+{
+}
+
+bool TcpReader::prepare()
+{
+    if (!infos) {
+        SLOG(FATAL) << "shared queue is not created!";
+        return false;
+    }
+
+    _queue_read_io->on_read([]() {
+        eventfd_t num = 0;
+        eventfd_read(_queue_read_io->fd(), &num);
+        for (auto i = 0; i < num; ++i) {
+            ConnectionInfo info;
+            if(!_infos->pop(&info)) {
+                break;
+            }
+
+
+        }
+    });
+
+    return get_local_loop()->add_io(_queue_read_io);
+}
+
+
