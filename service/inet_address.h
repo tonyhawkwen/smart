@@ -3,6 +3,9 @@
 
 #include <string>
 #include <unistd.h>
+#include <memory>
+#include "io.h"
+#include "buffer.h"
 
 namespace smart {
 
@@ -56,6 +59,14 @@ struct InetAddress {
         return *this;
     }
 };
+
+struct Connection {
+    std::shared_ptr<IO> io;
+    InetAddress inet_addr;
+    Buffer buffer;
+};
+
+using SConnection = std::shared_ptr<Connection>;
 
 }
 

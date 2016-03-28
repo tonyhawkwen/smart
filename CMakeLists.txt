@@ -22,6 +22,7 @@ INCLUDE_DIRECTORIES(public
 SET(SRC_LIST public/sockets.cpp
              core/loop.cpp
              core/service.cpp
+             service/tcp_reader.cpp
              service/tcp_service.cpp
              server.cpp)
 

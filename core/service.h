@@ -22,7 +22,7 @@ public:
     Service& operator= (const Service&) = delete;
     
     bool run();
-    void stop();
+    virtual void stop();
 
 protected:
     virtual bool prepare() {return true;}

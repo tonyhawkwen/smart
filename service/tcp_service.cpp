@@ -11,6 +11,11 @@ namespace smart {
 
 bool TcpService::prepare()
 {
+    if (!_read_pool.create()) {
+        SLOG(FATAL) << "create read pool fail";
+        return false;
+    }
+
     int error = 0;
     auto fd = rpc::create_tcp(&error);
     if (fd < 0) {
@@ -43,20 +48,21 @@ bool TcpService::prepare()
             return;
         }
         
-        _connections.emplace_back();
+        _connections.emplace_back(new Connection());
         auto& info = _connections.back();
-        info.io.reset(new IO(conn_fd, EV_READ | EV_ET));
-        info.inet_addr.addr = addr.sin_addr.s_addr;
-        info.inet_addr.saddr = inet_ntoa(addr.sin_addr);
-        info.inet_addr.port = addr.sin_port;
-        info.io->on_read([&info](){
-            SLOG(INFO) << "on read";
+        info->io.reset(new IO(conn_fd, EV_READ | EV_ET));
+        info->inet_addr.addr = addr.sin_addr.s_addr;
+        info->inet_addr.saddr = inet_ntoa(addr.sin_addr);
+        info->inet_addr.port = addr.sin_port;
+        info->io->on_read([&info, this](){
+            SLOG(INFO) << "on read, move read to read pools";
+            _read_pool.push(info);
         });
 
-        get_local_loop()->add_io(info.io);
+        get_local_loop()->add_io(info->io);
         SLOG(INFO) << "get new connection, fd[" << conn_fd 
-                   << "] from IP[" << info.inet_addr.saddr 
-                   << "] port[" << info.inet_addr.port <<"]";
+                   << "] from IP[" << info->inet_addr.saddr 
+                   << "] port[" << info->inet_addr.port <<"]";
     });
 
     get_local_loop()->add_io(_listen_io);
@@ -66,6 +72,12 @@ bool TcpService::prepare()
     }
 
     return true;
+}
+
+void TcpService::stop()
+{
+    _read_pool.destroy();
+    Service::stop();
 }
 
 }

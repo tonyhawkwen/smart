@@ -3,15 +3,9 @@
 
 #include <list>
 #include "service.h"
-#include "io.h"
-#include "inet_address.h"
+#include "tcp_reader.h"
 
 namespace smart {
-
-struct Connection {
-    std::shared_ptr<IO> io;
-    InetAddress inet_addr;
-};
 
 class TcpService : public Service {
 public:
@@ -29,6 +23,8 @@ public:
 
     virtual ~TcpService() {}
 
+    void stop() override;
+
 protected:
     bool prepare() override;
 
@@ -36,7 +32,8 @@ private:
     unsigned short _port;
     std::shared_ptr<IO> _listen_io;
     int _idle_fd;
-    std::list<Connection> _connections;
+    std::list<SConnection> _connections;
+    TcpReaderPool _read_pool;
 };
 
 }
