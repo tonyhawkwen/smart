@@ -34,20 +34,23 @@ bool TcpReader::prepare()
                 continue;
             }
 
-            SLOG(INFO) << "begin read";
             while (1) {
                 int error = 0;
                 auto ret = info->buffer.append_from_fd(info->io->fd(), &error);
-                if (ret == 0) {
-                    SLOG(INFO) << "buffer is full";
+                if (ret == -2) {
+                    SLOG(WARNING) << "buffer is full";
                     usleep(1000);
-                //do something here;
-                } else if (ret < 0) {
-                    if (error == EAGAIN) {
-                        SLOG(INFO) << "errno == EAGAIN";
+                } else if (ret == -1) {
+                    if (error != EAGAIN) {
+                        SLOG(WARNING) << "close connection, reason:" << error;
+                        info->deleted.store(true, std::memory_order_release);
                     } else {
-                        //close connection
+                        SLOG(WARNING) << "EAGAIN";
                     }
+                    break;
+                } else if (ret == 0) {
+                    SLOG(WARNING) << "close connection";
+                    info->deleted.store(true, std::memory_order_release);
                     break;
                 } else {
                     SLOG(INFO) << "get data [size:" << ret <<"]:" << info->buffer;

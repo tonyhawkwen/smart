@@ -45,7 +45,7 @@ private:
     struct ev_loop* _loop;
     ev_async _async;
     bool _quit;
-    std::vector<smart_ev_io> _ios;   
+    std::vector<std::shared_ptr<smart_ev_io>> _ios;
     std::queue<size_t> _idle_io_index;
 };
 

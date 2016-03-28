@@ -111,9 +111,9 @@ bool Loop::add_io(std::shared_ptr<IO>& io)
         return true;
     }
 
-    smart_ev_io* one_io;
+    std::shared_ptr<smart_ev_io>* one_io;
     if (_idle_io_index.empty()) {
-        _ios.emplace_back(smart_ev_io());
+        _ios.emplace_back(new smart_ev_io());
         io->set_index(_ios.size() - 1);
         one_io = &_ios.back();
     } else {
@@ -123,9 +123,9 @@ bool Loop::add_io(std::shared_ptr<IO>& io)
         one_io = &_ios[index];
     }
 
-    one_io->sio = io;
-    ev_io_init(&one_io->eio, ev_io_common_cb, io->fd(), io->events());
-    ev_io_start(_loop, &one_io->eio);
+    (*one_io)->sio = io;
+    ev_io_init(&(*one_io)->eio, ev_io_common_cb, io->fd(), io->events());
+    ev_io_start(_loop, &(*one_io)->eio);
 
     return true;
 }
@@ -140,16 +140,16 @@ bool Loop::remove_io(std::shared_ptr<IO>& io)
         return true;
     }
     
-    auto &one_io = _ios[io->index()];
-    if (S_UNLIKELY(one_io.sio.owner_before(io))) {
+    auto one_io = _ios[io->index()];
+    if (S_UNLIKELY(one_io->sio.owner_before(io))) {
         SLOG(WARNING) << "ios'index[" << io->index() << "] has changed!";
         return false;
     }
 
-    ev_io_stop(_loop, &one_io.eio);
+    ev_io_stop(_loop, &one_io->eio);
     _idle_io_index.push(io->index());
     io->set_index(-1);
-    one_io.sio.reset();
+    one_io->sio.reset();
 
     return true;
 }
@@ -164,8 +164,8 @@ bool Loop::stop_io(std::shared_ptr<IO>& io)
         return true;
     }
 
-    auto &one_io = _ios[io->index()];
-    ev_io_stop(_loop, &one_io.eio);
+    auto one_io = _ios[io->index()];
+    ev_io_stop(_loop, &one_io->eio);
     return true;
 }
 
@@ -179,8 +179,8 @@ bool Loop::restart_io(std::shared_ptr<IO>& io)
         return true;
     }
 
-    auto &one_io = _ios[io->index()];
-    ev_io_start(_loop, &one_io.eio);
+    auto one_io = _ios[io->index()];
+    ev_io_start(_loop, &one_io->eio);
     return true;
 }
 

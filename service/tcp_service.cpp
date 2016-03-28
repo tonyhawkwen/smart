@@ -48,15 +48,24 @@ bool TcpService::prepare()
             return;
         }
         
-        _connections.emplace_back(new Connection());
-        auto& info = _connections.back();
+        auto ret = _connections.emplace(conn_fd, SConnection(new Connection()));
+        auto& info = ret.first->second;
+        info->deleted.store(false, std::memory_order_release);
         info->io.reset(new IO(conn_fd, EV_READ | EV_ET));
         info->inet_addr.addr = addr.sin_addr.s_addr;
         info->inet_addr.saddr = inet_ntoa(addr.sin_addr);
         info->inet_addr.port = addr.sin_port;
         info->io->on_read([&info, this](){
-            SLOG(INFO) << "on read, move read to read pools";
-            _read_pool.push(info);
+            if (info->deleted.load(std::memory_order_acquire)) {
+                SLOG(INFO) << "connection is closed fd[" << info->io->fd()
+                           << "] from IP[" << info->inet_addr.saddr
+                           << "] port[" << info->inet_addr.port <<"]";
+                get_local_loop()->remove_io(info->io);
+                _connections.erase(info->io->fd());
+            } else {
+                SLOG(WARNING) << "push data!";
+                _read_pool.push(info);
+            }
         });
 
         get_local_loop()->add_io(info->io);
@@ -74,10 +83,9 @@ bool TcpService::prepare()
     return true;
 }
 
-void TcpService::stop()
+void TcpService::process_end()
 {
     _read_pool.destroy();
-    Service::stop();
 }
 
 }

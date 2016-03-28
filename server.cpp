@@ -45,12 +45,14 @@ int main(int argc, char** argv) {
     }
 
     smart::TcpService service;
+    SLOG(INFO) << std::this_thread::get_id();
     service.run();
 
     while (!gExitServer) {
         sleep(1);
     }
 
+    SLOG(INFO) << std::this_thread::get_id();
     service.stop();
 
     return 0;

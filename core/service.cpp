@@ -10,7 +10,8 @@ void Service::stop()
 {
     SLOG(INFO) << "begin to stop " << _name;
     if (std::this_thread::get_id() != _creator) {
-        SLOG(WARNING) << "you have no access to destroy";
+        SLOG(WARNING) << "you have no access to destroy " 
+            << _name << ", owner" << _creator;
     }
 
     std::lock_guard<std::mutex> lock(_mutex);
@@ -81,6 +82,8 @@ void Service::process()
     SLOG(INFO) << _name << " loop begin...";
     get_local_loop()->loop();
     SLOG(INFO) << _name << " loop end.";
+
+    process_end();
 }
 
 }

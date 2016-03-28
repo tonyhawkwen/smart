@@ -15,7 +15,7 @@ class Service {
 public:
     Service(const std::string& name) : 
         _name(name),
-        _creator(std::this_thread::get_id()){}
+        _creator(std::this_thread::get_id()) {}
 
     virtual ~Service() {}
     Service(const Service&) = delete;
@@ -26,6 +26,7 @@ public:
 
 protected:
     virtual bool prepare() {return true;}
+    virtual void process_end() {}
 
 private:
     void process();

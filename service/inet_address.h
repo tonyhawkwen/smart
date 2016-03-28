@@ -4,6 +4,7 @@
 #include <string>
 #include <unistd.h>
 #include <memory>
+#include <atomic>
 #include "io.h"
 #include "buffer.h"
 
@@ -64,6 +65,7 @@ struct Connection {
     std::shared_ptr<IO> io;
     InetAddress inet_addr;
     Buffer buffer;
+    std::atomic<bool> deleted;
 };
 
 using SConnection = std::shared_ptr<Connection>;

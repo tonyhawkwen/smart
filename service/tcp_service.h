@@ -1,7 +1,7 @@
 #ifndef SERVICE_TCP_SERVICE_H
 #define SERVICE_TCP_SERVICE_H
 
-#include <list>
+#include <map>
 #include "service.h"
 #include "tcp_reader.h"
 
@@ -23,16 +23,15 @@ public:
 
     virtual ~TcpService() {}
 
-    void stop() override;
-
 protected:
     bool prepare() override;
+    void process_end() override;
 
 private:
     unsigned short _port;
     std::shared_ptr<IO> _listen_io;
     int _idle_fd;
-    std::list<SConnection> _connections;
+    std::map<int, SConnection> _connections;
     TcpReaderPool _read_pool;
 };
 

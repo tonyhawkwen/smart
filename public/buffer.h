@@ -409,7 +409,7 @@ public:
         size_t nw = writable_bytes();
         if (nw == 0)
         {
-            return nw;
+            return -2;
         }
 
         if (_read_index < _write_index)
@@ -454,7 +454,6 @@ public:
         {
             _write_index = (_write_index + ret) & _mask;
         } else {
-            ret = -1;
             *error = errno;
         }
 
