@@ -1,5 +1,5 @@
-#ifndef CORE_SERVICE_H
-#define CORE_SERVICE_H
+#ifndef CORE_LOOP_THREAD_H
+#define CORE_LOOP_THREAD_H
 
 #include <string>
 #include <thread>
@@ -11,15 +11,15 @@ namespace smart {
 
 class Loop;
 
-class Service {
+class LoopThread {
 public:
-    Service(const std::string& name) : 
+    LoopThread(const std::string& name) : 
         _name(name),
         _creator(std::this_thread::get_id()) {}
 
-    virtual ~Service() {}
-    Service(const Service&) = delete;
-    Service& operator= (const Service&) = delete;
+    virtual ~LoopThread() {}
+    LoopThread(const LoopThread&) = delete;
+    LoopThread& operator= (const LoopThread&) = delete;
     
     bool run();
     virtual void stop();
@@ -42,4 +42,4 @@ private:
 
 }
 
-#endif /*CORE_SERVICE_H*/
+#endif /*CORE_LOOP_THREAD_H*/

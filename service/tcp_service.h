@@ -2,22 +2,22 @@
 #define SERVICE_TCP_SERVICE_H
 
 #include <map>
-#include "service.h"
+#include "loop_thread.h"
 #include "tcp_reader.h"
 
 namespace smart {
 
-class TcpService : public Service {
+class TcpService : public LoopThread {
 public:
     using EventCallback = std::function<void()>;
 
     TcpService():
-        Service("tcp_service"),
+        LoopThread("tcp_service"),
         _port(1080),
         _listen_io(new IO) {}
     
     TcpService(unsigned short port):
-        Service("tcp_service"),
+        LoopThread("tcp_service"),
         _port(port),
         _listen_io(new IO) {}
 
@@ -31,7 +31,6 @@ private:
     unsigned short _port;
     std::shared_ptr<IO> _listen_io;
     int _idle_fd;
-    std::map<int, SConnection> _connections;
     TcpReaderPool _read_pool;
 };
 

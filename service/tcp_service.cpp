@@ -31,47 +31,37 @@ bool TcpService::prepare()
     _idle_fd = open("/dev/null", O_RDONLY | O_CLOEXEC);
 
     _listen_io->set_fd(fd);
-    _listen_io->set_events(EV_READ);
+    _listen_io->set_events(EV_READ | EV_ET);
     _listen_io->on_read([this]() {
-        struct sockaddr_in addr;
-        int error = 0;
-        auto conn_fd = rpc::accept(_listen_io->fd(), addr, &error);
-        if (conn_fd < 0) {
-            SLOG(WARNING) << "accept fail";
-            if (error == EMFILE) {
-                close(_idle_fd);
-                _idle_fd = accept(_listen_io->fd(), nullptr, nullptr);
-                close(_idle_fd);
-                _idle_fd = open("/dev/null", O_RDONLY | O_CLOEXEC);
+        while (1) {
+            struct sockaddr_in addr;
+            int error = 0;
+            auto conn_fd = rpc::accept(_listen_io->fd(), addr, &error);
+            if (conn_fd < 0) {
+                if (error == EAGAIN) {
+                    break;
+                }
+                SLOG(WARNING) << "accept fail";
+                /*if (error == EMFILE) {
+                    close(_idle_fd);
+                    _idle_fd = accept(_listen_io->fd(), nullptr, nullptr);
+                    close(_idle_fd);
+                    _idle_fd = open("/dev/null", O_RDONLY | O_CLOEXEC);
+                }*/
+                continue;
             }
 
-            return;
-        }
-        
-        auto ret = _connections.emplace(conn_fd, SConnection(new Connection()));
-        auto& info = ret.first->second;
-        info->deleted.store(false, std::memory_order_release);
-        info->io.reset(new IO(conn_fd, EV_READ | EV_ET));
-        info->inet_addr.addr = addr.sin_addr.s_addr;
-        info->inet_addr.saddr = inet_ntoa(addr.sin_addr);
-        info->inet_addr.port = addr.sin_port;
-        info->io->on_read([&info, this](){
-            if (info->deleted.load(std::memory_order_acquire)) {
-                SLOG(INFO) << "connection is closed fd[" << info->io->fd()
-                           << "] from IP[" << info->inet_addr.saddr
-                           << "] port[" << info->inet_addr.port <<"]";
-                get_local_loop()->remove_io(info->io);
-                _connections.erase(info->io->fd());
-            } else {
-                SLOG(WARNING) << "push data!";
-                _read_pool.push(info);
-            }
-        });
+            auto info = std::make_shared<Connection>();
+            info->io = std::make_shared<IO>(conn_fd, EV_READ | EV_ET);
+            info->inet_addr.addr = addr.sin_addr.s_addr;
+            info->inet_addr.saddr = inet_ntoa(addr.sin_addr);
+            info->inet_addr.port = addr.sin_port;
+            _read_pool.push(std::move(info));
 
-        get_local_loop()->add_io(info->io);
-        SLOG(INFO) << "get new connection, fd[" << conn_fd 
+            SLOG(INFO) << "get new connection, fd[" << conn_fd 
                    << "] from IP[" << info->inet_addr.saddr 
                    << "] port[" << info->inet_addr.port <<"]";
+        }
     });
 
     get_local_loop()->add_io(_listen_io);

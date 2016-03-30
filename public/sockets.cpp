@@ -92,15 +92,15 @@ int rpc::accept(int sockfd, struct sockaddr_in& addr, int* error)
                 throw_system_error(sstream.str());
             }
             break;
+        case EAGAIN:
+            break;
         default:
-            SLOG(ERROR) << "socket accept fd " << sockfd << " failed :" << error;
+            SLOG(ERROR) << "socket accept fd " << sockfd << " failed :" << *error;
             break;
         }
-    }
-
-    int nodelay = 1;
-    if(::setsockopt(connfd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay)) == -1)
-    {
+    } else {
+        int nodelay = 1;
+        ::setsockopt(connfd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
     }
 
     return connfd;

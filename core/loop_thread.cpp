@@ -1,4 +1,4 @@
-#include "service.h"
+#include "loop_thread.h"
 #include <sstream>
 #include "loop.h"
 #include "exception.h"
@@ -6,7 +6,7 @@
 
 namespace smart {
 
-void Service::stop()
+void LoopThread::stop()
 {
     SLOG(INFO) << "begin to stop " << _name;
     if (std::this_thread::get_id() != _creator) {
@@ -23,7 +23,7 @@ void Service::stop()
     }
 }
 
-bool Service::run()
+bool LoopThread::run()
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
@@ -31,7 +31,7 @@ bool Service::run()
 
     try {
         std::future<bool> fut = _created.get_future();
-        _thread.reset(new std::thread(&Service::process, this));
+        _thread.reset(new std::thread(&LoopThread::process, this));
         ret = fut.get();
     } catch (const std::exception& ex) {
         std::stringstream sstream;
@@ -44,7 +44,7 @@ bool Service::run()
     return ret;
 }
 
-void Service::process()
+void LoopThread::process()
 {
     SLOG(INFO) << "service process init begin...";
     bool ret = false;

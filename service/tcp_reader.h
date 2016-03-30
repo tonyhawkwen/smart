@@ -1,16 +1,17 @@
 #ifndef SERVICE_TCP_READER_H
 #define SERVICE_TCP_READER_H
 
+#include <map>
 #include <vector>
 #include <memory>
 #include "io.h"
-#include "service.h"
+#include "loop_thread.h"
 #include "mpmc_queue.hpp"
-#include "inet_address.h"
+#include "service_data.h"
 
 namespace smart {
 
-class TcpReader : public Service {
+class TcpReader : public LoopThread {
 public:
     TcpReader(int fd, MPMCQueue<SConnection>& infos);
     virtual ~TcpReader();
@@ -20,6 +21,7 @@ protected:
 private:
     std::shared_ptr<IO> _queue_read_io;
     MPMCQueue<SConnection>* _connections;
+    std::map<int, SConnection> _conn_map;
 };
 
 class TcpReaderPool {
@@ -29,7 +31,7 @@ public:
 
     bool create();
     void destroy();
-    void push(SConnection&);
+    void push(SConnection&&);
 
 private:
     int _queue_write_fd;

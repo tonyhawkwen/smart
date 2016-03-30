@@ -16,14 +16,18 @@ INCLUDE_DIRECTORIES(${PKGS_INCLUDE_DIRS})
 
 INCLUDE_DIRECTORIES(public
                     core
+                    http
                     service)
 
 
 SET(SRC_LIST public/sockets.cpp
+             http/http_parser.cpp
+             http/http_message.cpp
              core/loop.cpp
-             core/service.cpp
+             core/loop_thread.cpp
              service/tcp_reader.cpp
              service/tcp_service.cpp
+             service/service_pool.cpp
              server.cpp)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++11 -pthread")

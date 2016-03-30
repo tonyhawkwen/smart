@@ -2,6 +2,7 @@
 #include <gflags/gflags.h>
 #include "logging.h"
 #include "tcp_service.h"
+#include "service_pool.h"
 
 DEFINE_string(log_path, "./conf/log.conf", "log conf");
 
@@ -25,8 +26,14 @@ void singal_handle()
 
 bool global_init()
 {
-
+    //ServicePool::get_instance().add_service(xxx,yyy);
+    smart::ServicePool::get_instance().run();
     return true;
+}
+
+void destroy()
+{
+    smart::ServicePool::get_instance().stop();
 }
 
 void init_logging() {
@@ -44,15 +51,15 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+
     smart::TcpService service;
-    SLOG(INFO) << std::this_thread::get_id();
     service.run();
 
     while (!gExitServer) {
         sleep(1);
     }
 
-    SLOG(INFO) << std::this_thread::get_id();
+    destroy();
     service.stop();
 
     return 0;

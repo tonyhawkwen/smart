@@ -1,5 +1,5 @@
-#ifndef SERVICE_INET_ADDRESS_H
-#define SERVICE_INET_ADDRESS_H
+#ifndef SERVICE_SERVICE_DATA_H
+#define SERVICE_SERVICE_DATA_H
 
 #include <string>
 #include <unistd.h>
@@ -7,6 +7,7 @@
 #include <atomic>
 #include "io.h"
 #include "buffer.h"
+#include "http_message.h"
 
 namespace smart {
 
@@ -64,12 +65,13 @@ struct InetAddress {
 struct Connection {
     std::shared_ptr<IO> io;
     InetAddress inet_addr;
-    Buffer buffer;
-    std::atomic<bool> deleted;
+    Buffer i_buffer;
+    Buffer o_buffer;
+    SHttpMessage _deposited_msg;
 };
 
 using SConnection = std::shared_ptr<Connection>;
-
+using Letter = std::pair<SConnection, SHttpMessage>;
 }
 
-#endif /*SERVICE_INET_ADDRESS_H*/
+#endif /*SERVICE_SERVICE_DATA_H*/

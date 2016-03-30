@@ -286,6 +286,23 @@ public:
         return const_iterator(_ring_buffer, _write_index, _mask);
     }
 
+    std::vector<std::pair<const unsigned char*, size_t>> strs() const
+    {
+        std::vector<std::pair<const unsigned char*, size_t>> ret;
+        if (_read_index <= _write_index) {
+            ret.emplace_back(std::make_pair(
+                        _ring_buffer + _read_index,
+                        _write_index - _read_index));
+        } else {
+            ret.emplace_back(std::make_pair(
+                        _ring_buffer + _read_index,
+                        _capacity - _read_index));
+            ret.emplace_back(std::make_pair(
+                        _ring_buffer, _write_index));
+        }
+        return ret;
+    }
+
     std::pair<const unsigned char*, size_t> str() const
     {
         std::pair<const unsigned char*, size_t> ret;
@@ -341,6 +358,11 @@ public:
         //TO DO:not efficient when in _read_buffer case
         std::pair<const unsigned char*, size_t> ref = other.str();
         return append(ref.first, ref.second);
+    }
+
+    size_t append(const char* other)
+    {
+        return append((const unsigned char*)other, strlen(other));
     }
 
     size_t append(const unsigned char* data, size_t size)
@@ -465,7 +487,7 @@ public:
         iovec vec[2];
         int nvec = 0;
         size_t nr = readable_bytes();
-        if (nr > size)
+        if (size != 0 && nr > size)
         {
             nr = size;
         }
