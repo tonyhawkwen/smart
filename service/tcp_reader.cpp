@@ -10,7 +10,7 @@ namespace smart {
 
 TcpReader::TcpReader(int fd, MPMCQueue<SConnection>& connections):
     LoopThread("tcp_reader"),
-    _queue_read_io(new IO(fd, EV_READ)),
+    _queue_read_io(new IO(fd, EV_READ, false)),
     _connections(&connections)
 {
 }
@@ -45,7 +45,7 @@ bool TcpReader::prepare()
                 SLOG(INFO) << "get data:" << my_info->i_buffer;
                 my_info->i_buffer.cut(my_info->_deposited_msg->parse(my_info->i_buffer));
                 if (my_info->_deposited_msg->completed()) {
-                    SLOG(INFO) << "http message:" << my_info->_deposited_msg;
+                    SLOG(INFO) << "http message:" << *my_info->_deposited_msg;
                     Letter letter;
                     letter.first = my_info;
                     my_info->_deposited_msg.swap(letter.second);
@@ -69,12 +69,12 @@ bool TcpReader::prepare()
                 }
 
                 if (nread == 0 || (nread < 0 && error != EAGAIN)) {
-                    SLOG(WARNING) << "close connection, reason:" << error;
-                    get_local_loop()->remove_io(info->io);
-                    _conn_map.erase(info->io->fd());
-                    SLOG(INFO) << "connection is closed fd[" << info->io->fd()
+                    SLOG(INFO) << "connection is closed, reason:" << error
+                           <<". fd[" << info->io->fd()
                            << "] from IP[" << info->inet_addr.saddr
                            << "] port[" << info->inet_addr.port <<"]";
+                    get_local_loop()->remove_io(info->io);
+                    _conn_map.erase(info->io->fd());
                     return;
                 }
 

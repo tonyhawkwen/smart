@@ -45,7 +45,8 @@ public:
     void clear();
     const std::string& content() { return _content; }
     bool set_response(Buffer& buff, const HttpStatus& status, const std::string& content);
-
+    const std::string& get_service_name() { return _service_name; }
+    const std::string& get_method_name() { return _method_name; }
 // Http parser callback functions
     static int on_message_begin(http_parser *);
     static int on_url(http_parser *, const char *, const size_t);
@@ -76,6 +77,8 @@ private:
     HttpParserStage _stage;
     struct http_parser _parser;
     std::string _url;
+    std::string _service_name;
+    std::string _method_name;
     std::string _status;
     std::string _cur_header;
     std::map<std::string, std::string> _header_map;

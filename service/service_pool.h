@@ -6,9 +6,9 @@
 #include "loop_thread.h"
 #include "service_data.h"
 #include "mpmc_queue.hpp"
-#include "rapidjson/document.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/stringbuffer.h"
+#include "json.hpp"
+
+using json = nlohmann::json;
 
 namespace smart {
 
@@ -28,7 +28,7 @@ private:
 //FIXME: use protobuf in future
 class Service {
 public:
-    using Method = std::function<HttpStatus(const rapidjson::Document&, rapidjson::Document&)>;
+    using Method = std::function<HttpStatus(const json&, json&)>;
     Service() {
         _methods.reserve(24);//预留24个函数
     }
@@ -48,8 +48,8 @@ public:
     }
     
     virtual void init() {
-        add_method("Health", [](const rapidjson::Document&, rapidjson::Document& reply) -> HttpStatus {
-            reply.AddMember("status", "ok", replay.GetAllocator());
+        add_method("Health", [](const json&, json& reply) -> HttpStatus {
+            reply["status"] = "ok";
             return HttpStatus::OK;
         });
     }

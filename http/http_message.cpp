@@ -109,6 +109,29 @@ int HttpMessage::on_url(http_parser* parser,
     HttpMessage* http_message = static_cast<HttpMessage*>(parser->data);
     http_message->_stage = HTTP_ON_URL;
     http_message->_url.append(at, length);
+    struct http_parser_url u;
+    if(0 == http_parser_parse_url(http_message->_url.c_str(),
+                http_message->_url.length(), 0, &u)) {
+        if(u.field_set & (1 << UF_PATH) )  
+        {  
+            std::string path(
+                    http_message->_url.c_str() + u.field_data[UF_PATH].off, 
+                    u.field_data[UF_PATH].len);
+            auto found = path.rfind('/');
+            if (found != std::string::npos) {
+                if (found + 1 < path.length()) {
+                    http_message->_method_name = 
+                        path.substr(found + 1, path.length() - found - 1);
+                }
+
+                if (found > 0) {
+                    http_message->_service_name =
+                        path.substr(1, found - 1);
+                }
+            }
+        }  
+    }
+
     return 0;
 }
 

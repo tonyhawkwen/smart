@@ -15,7 +15,7 @@ ServicePool& ServicePool::get_instance()
 
 ServProc::ServProc(int fd, MPMCQueue<Letter>& letters):
     LoopThread("service_processor"),
-    _queue_read_io(new IO(fd, EV_READ)),
+    _queue_read_io(new IO(fd, EV_READ, false)),
     _letters(&letters)
 {
 }
@@ -31,20 +31,21 @@ bool ServProc::prepare()
                 break;
             }
 
-            rapidjson::Document request;
-            request.Parse(letter.second->content());
-            rapidjson::Document response;
-            response.SetObject();
-            auto status = ServicePool::get_instance().find_service("xxx")
-                ->find_method("yyy")(request, response);
-            rapidjson::StringBuffer out;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(out);
-            response.Accept(writer);
+            SLOG(INFO) << "begin to parse:" << letter.second->content();
+            json request;
+            json response;
+            if (!letter.second->content().empty()) {
+                request = json::parse(letter.second->content());
+            }
+            SLOG(INFO) << "begin to call method" << letter.second->get_service_name()
+                       << " " << letter.second->get_method_name();
+            auto status = ServicePool::get_instance()
+                .find_service(letter.second->get_service_name())
+                ->find_method(letter.second->get_method_name())(request, response);
 
-            SLOG(INFO) << "content:" << out.GetString();
-            Buffer out_buffer;
-            letter.second->set_response(out_buffer, status, out.GetString());
-            out_buffer.cut_into_fd(letter.first->io->fd(), 0);
+            SLOG(INFO) << "content:" << response;
+            letter.second->set_response(letter.first->o_buffer, status, response.dump());
+            letter.first->o_buffer.cut_into_fd(letter.first->io->fd(), 0);
         }
     });
 
@@ -53,9 +54,9 @@ bool ServProc::prepare()
 
 
 Service::Method Service::_default_method = 
-    [](const rapidjson::Document&, rapidjson::Document& response) -> HttpStatus {
-        response.AddMember("status", "fail", response.GetAllocator());
-        response.AddMember("message", "method not found", response.GetAllocator());
+    [](const json&, json& response) -> HttpStatus {
+        response["status"] = "fail";
+        response["message"] = "method not found";
 
         return HttpStatus::BAD_REQUEST;
     };
