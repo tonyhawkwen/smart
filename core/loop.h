@@ -32,9 +32,10 @@ public:
     bool is_going_to_quit() { return _quit; }
 
     bool add_io(std::shared_ptr<IO>&);
+    bool add_io(std::shared_ptr<IO>&, bool start);
     bool remove_io(std::shared_ptr<IO>&);
     bool stop_io(std::shared_ptr<IO>&);
-    bool restart_io(std::shared_ptr<IO>&);
+    bool start_io(std::shared_ptr<IO>&);
 
 private:
     static void ev_io_common_cb(struct ev_loop* loop, struct ev_io* w, int revents);

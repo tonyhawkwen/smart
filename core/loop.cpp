@@ -37,9 +37,12 @@ Loop::Loop() :
 
 Loop::~Loop()
 {
-    if (std::this_thread::get_id() == _owner
-            && nullptr != _loop) {
-
+    if (nullptr != _loop) {
+        for (auto & io : _ios) {
+            if (!io->sio.expired()) {
+                ev_io_stop(_loop, &io->eio);
+            }
+        }
         SLOG(INFO) << "quit now!";
         ev_loop_destroy(_loop);
     }
@@ -104,6 +107,11 @@ void Loop::resume()
 
 bool Loop::add_io(std::shared_ptr<IO>& io)
 {
+    return add_io(io, true);
+}
+
+bool Loop::add_io(std::shared_ptr<IO>& io, bool start)
+{
     if (S_UNLIKELY(_loop == nullptr)) {
         return false;
     }
@@ -125,7 +133,9 @@ bool Loop::add_io(std::shared_ptr<IO>& io)
 
     (*one_io)->sio = io;
     ev_io_init(&(*one_io)->eio, ev_io_common_cb, io->fd(), io->events());
-    ev_io_start(_loop, &(*one_io)->eio);
+    if (start) {
+        ev_io_start(_loop, &(*one_io)->eio);
+    }
 
     return true;
 }
@@ -169,7 +179,7 @@ bool Loop::stop_io(std::shared_ptr<IO>& io)
     return true;
 }
 
-bool Loop::restart_io(std::shared_ptr<IO>& io)
+bool Loop::start_io(std::shared_ptr<IO>& io)
 {
     if (S_UNLIKELY(_loop == nullptr)) {
         return false;

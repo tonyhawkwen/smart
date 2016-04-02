@@ -42,7 +42,6 @@ bool TcpReader::prepare()
                     my_info->_deposited_msg = std::make_shared<HttpMessage>();
                 }
 
-                SLOG(INFO) << "get data:" << my_info->i_buffer;
                 my_info->i_buffer.cut(my_info->_deposited_msg->parse(my_info->i_buffer));
                 if (my_info->_deposited_msg->completed()) {
                     SLOG(INFO) << "http message:" << *my_info->_deposited_msg;
@@ -86,6 +85,11 @@ bool TcpReader::prepare()
     });
 
     return get_local_loop()->add_io(_queue_read_io);
+}
+
+void TcpReader::process_end()
+{
+    get_local_loop()->remove_io(_queue_read_io);
 }
 
 bool TcpReaderPool::create()

@@ -4,6 +4,7 @@
 #include "sockets.h"
 #include "loop.h"
 #include "logging.h"
+#include "redis_proxy.h"
 
 namespace smart {
 
@@ -32,33 +33,37 @@ bool ServProc::prepare()
             }
 
             SLOG(INFO) << "begin to parse:" << letter.second->content();
-            json request;
-            json response;
+            shared_json request;
+            shared_json response;
             if (!letter.second->content().empty()) {
-                request = json::parse(letter.second->content());
+                request = std::make_shared<json>(
+                    json::parse(letter.second->content()));
+            } else {
+                request = std::make_shared<json>();
             }
-            SLOG(INFO) << "begin to call method" << letter.second->get_service_name()
-                       << " " << letter.second->get_method_name();
-            auto status = ServicePool::get_instance()
-                .find_service(letter.second->get_service_name())
-                ->find_method(letter.second->get_method_name())(request, response);
+            response = std::make_shared<json>();
+            std::shared_ptr<Control> ctrl = std::make_shared<Control>(letter, response);
 
-            SLOG(INFO) << "content:" << response;
-            letter.second->set_response(letter.first->o_buffer, status, response.dump());
-            letter.first->o_buffer.cut_into_fd(letter.first->io->fd(), 0);
+            SLOG(INFO) << "begin to call method: " << letter.second->get_service_name()
+                       << " " << letter.second->get_method_name();
+            ServicePool::get_instance()
+                .find_service(letter.second->get_service_name())
+                ->find_method(letter.second->get_method_name())(request, response, ctrl);
         }
     });
-
+    
     return get_local_loop()->add_io(_queue_read_io);
 }
 
+void ServProc::process_end()
+{
+    get_local_loop()->remove_io(_queue_read_io);
+}
 
 Service::Method Service::_default_method = 
-    [](const json&, json& response) -> HttpStatus {
-        response["status"] = "fail";
-        response["message"] = "method not found";
-
-        return HttpStatus::BAD_REQUEST;
+    [](const shared_json&, shared_json& response, SControl&) {
+        (*response)["status"] = "fail";
+        (*response)["message"] = "method not found";
     };
 
 bool ServicePool::run()

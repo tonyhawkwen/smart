@@ -76,6 +76,7 @@ bool TcpService::prepare()
 void TcpService::process_end()
 {
     _read_pool.destroy();
+    get_local_loop()->remove_io(_listen_io);
 }
 
 }

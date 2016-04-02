@@ -3,6 +3,9 @@
 #include "logging.h"
 #include "tcp_service.h"
 #include "service_pool.h"
+#include "auth_service.h"
+
+using namespace smart;
 
 DEFINE_string(log_path, "./conf/log.conf", "log conf");
 
@@ -26,14 +29,11 @@ void singal_handle()
 
 bool global_init()
 {
-    //ServicePool::get_instance().add_service(xxx,yyy);
-    smart::ServicePool::get_instance().run();
     return true;
 }
 
 void destroy()
 {
-    smart::ServicePool::get_instance().stop();
 }
 
 void init_logging() {
@@ -51,8 +51,11 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    AccessService access_service;
+    ServicePool::get_instance().add_service(&access_service,"AccessService");
+    ServicePool::get_instance().run();
 
-    smart::TcpService service;
+    TcpService service;
     service.run();
 
     while (!gExitServer) {
@@ -60,6 +63,7 @@ int main(int argc, char** argv) {
     }
 
     destroy();
+    ServicePool::get_instance().stop();
     service.stop();
 
     return 0;

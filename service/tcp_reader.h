@@ -17,6 +17,7 @@ public:
     virtual ~TcpReader();
 protected:
     bool prepare() override;
+    void process_end() override;
 
 private:
     std::shared_ptr<IO> _queue_read_io;
