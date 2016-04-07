@@ -18,7 +18,7 @@ INCLUDE_DIRECTORIES(public
                     core
                     redis
                     http
-                    small
+                    service
                     authorize)
 
 SET(SRC_LIST public/sockets.cpp
@@ -27,9 +27,11 @@ SET(SRC_LIST public/sockets.cpp
              core/loop.cpp
              core/loop_thread.cpp
              redis/redis_proxy.cpp
-             small/tcp_service.cpp
+             service/tcp_reader.cpp
+             service/tcp_service.cpp
+             service/service_pool.cpp
              authorize/auth_service.cpp
-             server_small.cpp)
+             server.cpp)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++11 -pthread")
 ADD_DEFINITIONS(-DELPP_THREAD_SAFE)
