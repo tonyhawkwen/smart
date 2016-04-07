@@ -33,22 +33,22 @@ bool ServProc::prepare()
             }
 
             SLOG(INFO) << "begin to parse:" << letter.second->content();
-            shared_json request;
-            shared_json response;
-            if (!letter.second->content().empty()) {
-                request = std::make_shared<json>(
-                    json::parse(letter.second->content()));
-            } else {
-                request = std::make_shared<json>();
-            }
-            response = std::make_shared<json>();
-            std::shared_ptr<Control> ctrl = std::make_shared<Control>(letter, response);
-
-            SLOG(INFO) << "begin to call method: " << letter.second->get_service_name()
-                       << " " << letter.second->get_method_name();
-            ServicePool::get_instance()
-                .find_service(letter.second->get_service_name())
+            auto response = std::make_shared<json>();
+            auto ctrl = std::make_shared<Control>(letter, response);
+            try {
+            auto request = std::make_shared<json>(
+                        json::parse(letter.second->content()));
+    
+                SLOG(INFO) << "begin to call method: " << letter.second->get_service_name()
+                           << " " << letter.second->get_method_name();
+                ServicePool::get_instance()
+                    .find_service(letter.second->get_service_name())
                 ->find_method(letter.second->get_method_name())(request, response, ctrl);
+            } catch (std::exception& ex) {
+                LOG(WARNING) << "catch error:" << ex.what();
+                (*response)["code"] = static_cast<int>(ErrCode::PARAM_ERROR);
+                (*response)["message"] = ex.what();
+            }
         }
     });
     
@@ -62,7 +62,7 @@ void ServProc::process_end()
 
 Service::Method Service::_default_method = 
     [](const shared_json&, shared_json& response, SControl&) {
-        (*response)["status"] = "fail";
+        (*response)["code"] = static_cast<int>(ErrCode::PARAM_ERROR);
         (*response)["message"] = "method not found";
     };
 
