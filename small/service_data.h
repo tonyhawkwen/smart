@@ -6,6 +6,7 @@
 #include <memory>
 #include <atomic>
 #include "io.h"
+#include "ssl.h"
 #include "buffer.h"
 #include "http_message.h"
 
@@ -68,6 +69,8 @@ struct Connection {
     Buffer i_buffer;
     Buffer o_buffer;
     SHttpMessage _deposited_msg;
+    rpc::SslCheck is_ssl;
+    std::shared_ptr<SSL> ssl_session;
 };
 
 using SConnection = std::shared_ptr<Connection>;

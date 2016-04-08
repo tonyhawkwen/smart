@@ -166,11 +166,20 @@ int HttpMessage::on_header_value(http_parser* parser,
         return -1;
     }
 
-    if (http_message->_stage != HTTP_ON_HEADER_FIELD) {
+    if (http_message->_stage == HTTP_ON_HEADER_FIELD) {
+        http_message->_stage = HTTP_ON_HEADER_VALUE;
+        http_message->_header_map.emplace(http_message->_cur_header, std::string(at, length));
+    } else if (http_message->_stage == HTTP_ON_HEADER_VALUE) {
+        auto itr = http_message->_header_map.find(http_message->_cur_header);
+        if (itr != http_message->_header_map.end()) {
+            itr->second.append(at, length);
+        } else {
+            return -1;
+        } 
+    } else {
         return -1;
     }
-    http_message->_stage = HTTP_ON_HEADER_VALUE;
-    http_message->_header_map.emplace(http_message->_cur_header, std::string(at, length));
+
     return 0;
 }
 

@@ -7,6 +7,7 @@
 #include <atomic>
 #include "io.h"
 #include "buffer.h"
+#include "ssl.h"
 #include "http_message.h"
 
 namespace smart {

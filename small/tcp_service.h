@@ -5,6 +5,7 @@
 #include "loop_thread.h"
 #include "service_data.h"
 #include "service.h"
+#include "ssl.h"
 
 namespace smart {
 
@@ -53,6 +54,7 @@ private:
     std::map<int, SConnection> _conn_map; 
     Service _base_service;
     std::unordered_map<std::string, Service*> _service_map;
+    std::shared_ptr<SSL_CTX> _ssl_ctx;
 };
 
 }

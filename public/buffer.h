@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <sys/uio.h>
 #include <string.h>
+#include <openssl/ssl.h>
 #include "logging.h"
 
 namespace smart {
@@ -122,7 +123,7 @@ public:
         size_t _mask;
     };
 
-    static constexpr auto DEFAULT_INITIAL_SIZE = 10240;
+    static constexpr auto DEFAULT_INITIAL_SIZE = 8192;
 
     explicit Buffer(size_t size) :
             _read_index(0),
@@ -378,7 +379,7 @@ public:
             return nw;
         }
 
-        if (_read_index < _write_index)
+        if (_read_index <= _write_index)
         {
             /// +-------------------+------------------+------------------+
             /// |   writable bytes  |  readable bytes  |  writable bytes  |
@@ -431,10 +432,10 @@ public:
         size_t nw = writable_bytes();
         if (nw == 0)
         {
-            return -2;
+            return 0;
         }
 
-        if (_read_index < _write_index)
+        if (_read_index <= _write_index)
         {
             /// +-------------------+------------------+------------------+
             /// |   writable bytes  |  readable bytes  |  writable bytes  |
@@ -480,6 +481,56 @@ public:
         }
 
         return ret;
+    }
+
+    ssize_t append_from_ssl(SSL* ssl, int* error)
+    {
+        size_t nw = writable_bytes();
+        if (nw == 0)
+        {
+            return 0;
+        }
+
+        if (_read_index <= _write_index)
+        {
+            /// +-------------------+------------------+------------------+
+            /// |   writable bytes  |  readable bytes  |  writable bytes  |
+            /// |                   |     (CONTENT)    |                  |
+            /// +-------------------+------------------+------------------+
+            /// |                   |                  |                  |
+            /// 0      <=      _read_index   <=   _write_index    <=     size
+            size_t written = _capacity - _write_index;
+            auto ret = SSL_read(ssl, _ring_buffer + _write_index, written);
+            if (ret <= 0) {
+                *error = SSL_get_error(ssl, ret);
+                return ret;
+            } else if (ret == written) {
+                auto ret2 = SSL_read(ssl, _ring_buffer, nw - written);
+                if (ret2 < 0) {
+                    *error = SSL_get_error(ssl, ret2);
+                    return ret2;
+                }
+                ret += ret2;
+            }
+            _write_index = (_write_index + ret) & _mask;
+            return ret;
+        }
+        else
+        {
+            /// +-------------------+------------------+------------------+
+            /// |   readable bytes  |  writable bytes  |  readable bytes  |
+            /// |     (CONTENT)     |                  |   (CONTENT)      |
+            /// +-------------------+------------------+------------------+
+            /// |                   |                  |                  |
+            /// 0      <=      _write_index   <=   _read_index     <=     size
+            auto ret = SSL_read(ssl, _ring_buffer + _write_index, nw);
+            if (ret <= 0) {
+                *error = SSL_get_error(ssl, ret);
+            } else {
+                _write_index = (_write_index + ret) & _mask;
+            }
+            return ret;
+        }
     }
 
     ssize_t cut_into_fd(int fd, size_t size)
@@ -532,14 +583,77 @@ public:
         auto ret = writev(fd, vec, nvec);
         if (ret > 0)
         {
-            _read_index = (_read_index + nr) & _mask;
+            _read_index = (_read_index + ret) & _mask;
         }
 
         return ret;
     }
 
+    ssize_t cut_into_ssl(SSL* ssl, size_t size)
+    {
+        iovec vec[2];
+        int nvec = 0;
+        size_t nr = readable_bytes();
+        if (size != 0 && nr > size)
+        {
+            nr = size;
+        }
+
+        if (_read_index < _write_index)
+        {
+            /// +-------------------+------------------+------------------+
+            /// |   writable bytes  |  readable bytes  |  writable bytes  |
+            /// |                   |     (CONTENT)    |                  |
+            /// +-------------------+------------------+------------------+
+            /// |                   |                  |                  |
+            /// 0      <=      _read_index   <=   _write_index    <=     size
+            auto ret = SSL_write(ssl, _ring_buffer + _read_index, nr);
+            if (ret > 0) {
+                _read_index = (_read_index + nr) & _mask;
+            }
+            return ret;
+        }
+        else
+        {
+            /// +-------------------+------------------+------------------+
+            /// |   readable bytes  |  writable bytes  |  readable bytes  |
+            /// |     (CONTENT)     |                  |   (CONTENT)      |
+            /// +-------------------+------------------+------------------+
+            /// |                   |                  |                  |
+            /// 0      <=      _write_index   <=   _read_index     <=     size
+            if (_capacity - _read_index > nr)
+            {
+                auto ret = SSL_write(ssl, _ring_buffer + _read_index, nr);
+                if (ret > 0) {
+                    _read_index = (_read_index + nr) & _mask;
+                }
+                return ret;
+            }
+            else
+            {
+                auto read = _capacity - _read_index;
+                auto ret = SSL_write(ssl, _ring_buffer + _read_index, read);
+                if (ret < 0) {
+                    return ret;
+                }
+
+                if (ret == read) {
+                    auto ret2 = SSL_write(ssl, _ring_buffer, nr - read);
+                    if (ret2 < 0) {
+                        return ret2;
+                    }
+                    ret += ret2;
+                }
+                _read_index = (_read_index + nr) & _mask;
+                return ret;
+            }
+        }
+    }
+
     friend inline std::ostream& operator<< (std::ostream& os, const Buffer& buf)
     {
+        os << "read:" << buf.read_index();
+        os << "write:" << buf.write_index() << "\n";
         for (auto itr = buf.begin(); itr != buf.end(); ++itr)
         {
             os << *itr;

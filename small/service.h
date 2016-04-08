@@ -29,7 +29,11 @@ public:
           _status(HttpStatus::OK) {}
     ~Control() {
         _message->set_response(_conn->o_buffer, _status, _response->dump());
-        _conn->o_buffer.cut_into_fd(_conn->io->fd(), 0);
+        if (_conn->is_ssl == rpc::SslCheck::IS_SSL) {
+            _conn->o_buffer.cut_into_ssl(_conn->ssl_session.get(), 0);
+        } else {
+            _conn->o_buffer.cut_into_fd(_conn->io->fd(), 0);
+        }
     }
 
     void set_http_status(HttpStatus status) { _status = status; }
