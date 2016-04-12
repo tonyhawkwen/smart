@@ -17,6 +17,12 @@ Service::Method Service::_default_method =
 
 bool TcpService::prepare()
 {
+    _ssl_ctx = rpc::create_ssl_context();
+    if (!_ssl_ctx) {
+        SLOG(FATAL) << "create ssl context fail!";
+        return false;
+    }
+
     int error = 0;
     auto fd = rpc::create_tcp(&error);
     if (fd < 0) {
@@ -54,6 +60,7 @@ bool TcpService::prepare()
         info->inet_addr.addr = addr.sin_addr.s_addr;
         info->inet_addr.saddr = inet_ntoa(addr.sin_addr);
         info->inet_addr.port = addr.sin_port;
+        info->is_ssl = rpc::SslCheck::UNKNOWN;
 
         SLOG(INFO) << "get new connection, fd[" << conn_fd 
                << "] from IP[" << info->inet_addr.saddr 
@@ -64,7 +71,18 @@ bool TcpService::prepare()
                 my_info->_deposited_msg = std::make_shared<HttpMessage>();
             }   
  
-            my_info->i_buffer.cut(my_info->_deposited_msg->parse(my_info->i_buffer));
+            auto cut_n = my_info->_deposited_msg->parse(my_info->i_buffer);
+            if (cut_n < 0) {
+                /*Letter letter;
+                letter.first = my_info;
+                auto response = std::make_shared<json>();
+                auto ctrl = std::make_shared<Control>(letter, response);
+                (*response)["code"] = static_cast<int>(ErrCode::PARAM_ERROR);
+                (*response)["message"] = "fail to parse http message";*/
+                //FIXME: to fix this
+                return;
+            }
+            my_info->i_buffer.cut(cut_n);
             if (my_info->_deposited_msg->completed()) {
                 SLOG(INFO) << "http message:" << *my_info->_deposited_msg;
                 Letter letter;
@@ -94,11 +112,39 @@ bool TcpService::prepare()
             SLOG(INFO) << "read connection fd[" << info->io->fd()
                        << "] from IP[" << info->inet_addr.saddr
                        << "] port[" << info->inet_addr.port <<"]";
+            if (info->i_buffer.writable_bytes() == 0) {
+                parse_http_message(info);
+            }
+
+            if (rpc::SslCheck::UNKNOWN == info->is_ssl) {
+                info->is_ssl = rpc::is_ssl(info->io->fd());
+            }
+
             int error = 0;
-            ssize_t nread = info->i_buffer.append_from_fd(info->io->fd(), &error);
-            if (nread == -2) {
-                    parse_http_message(info);
-            } else if (nread == 0) {
+            ssize_t nread = 0;
+            if (rpc::SslCheck::IS_SSL == info->is_ssl) {
+                SLOG(INFO) << "is ssl read.";
+                if (!info->ssl_session) {
+                    info->ssl_session = rpc::create_ssl_session(_ssl_ctx, info->io->fd(), true);
+                }
+                if (!info->ssl_session) {
+                    SLOG(WARNING) << "allocate ssl session fail!";
+                    return;
+                }
+                int ssl_error;
+                //if (rpc::ssl_shakehand(info->ssl_session, &ssl_error)) {
+                    nread = info->i_buffer.append_from_ssl(info->ssl_session.get(), &ssl_error);
+                //}
+                if (ssl_error == SSL_ERROR_WANT_READ
+                            || ssl_error == SSL_ERROR_WANT_WRITE) {
+                    SLOG(INFO) << "want read or write";
+                    return;
+                }
+            } else {
+                nread = info->i_buffer.append_from_fd(info->io->fd(), &error);
+            }
+
+            if (nread <= 0) {
                 SLOG(INFO) << "connection is closed, reason:" << error
                        <<". fd[" << info->io->fd()
                        << "] from IP[" << info->inet_addr.saddr
@@ -107,6 +153,7 @@ bool TcpService::prepare()
                 _conn_map.erase(info->io->fd());
                 return;
             }
+            LOG(INFO) << "recieve buffer:\n" << info->i_buffer;
  
             parse_http_message(info);
         });

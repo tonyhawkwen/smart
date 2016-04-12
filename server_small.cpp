@@ -1,5 +1,6 @@
 #include <iostream>
 #include <gflags/gflags.h>
+#include "ssl.h"
 #include "logging.h"
 #include "tcp_service.h"
 #include "auth_service.h"
@@ -28,6 +29,7 @@ void singal_handle()
 
 bool global_init()
 {
+    rpc::init_ssl();
     return true;
 }
 
