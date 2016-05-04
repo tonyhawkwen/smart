@@ -15,6 +15,15 @@ Service::Method Service::_default_method =
         (*response)["message"] = "method not found";
     };
 
+Service* TcpService::find_service(const std::string& name) {
+    auto itr = _service_map.find(name);
+    if (itr == _service_map.end()) {
+        SLOG(DEBUG) << "find service fail";
+        return &_base_service;
+    }   
+ 
+    return itr->second;
+}
 bool TcpService::prepare()
 {
     _ssl_ctx = rpc::create_ssl_context();

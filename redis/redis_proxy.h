@@ -6,6 +6,7 @@
 #include <memory>
 #include <functional>
 #include <queue>
+#include <vector>
 #include "io.h"
 
 namespace smart {
@@ -19,6 +20,32 @@ public:
     static bool init(const std::string& ip, int port);
     void connect();
     bool connected() { return _connected; }
+
+    template<typename T>
+    bool send_request(const std::vector<std::string>& commands, T&& fn)
+    {
+        if (nullptr == _context || commands.empty()) {
+            return false;
+        }
+        _callbacks.emplace(fn);
+        auto cmd_data = new const char*[commands.size()];
+        auto cmd_sizes = new size_t[commands.size()];
+        for (auto i = 0; i <commands.size(); ++i) {
+            cmd_data[i] = commands[i].c_str();
+            cmd_sizes[i] = commands[i].length();
+        }
+
+        redisAsyncCommandArgv(_context,
+                              redis_callback,
+                              this,
+                              commands.size(),
+                              cmd_data,
+                              cmd_sizes);
+        delete [] cmd_data;
+        delete [] cmd_sizes;
+        return true;
+    }
+
     template<typename T>
     bool send_request(const std::string& command, T&& fn)
     {
@@ -27,6 +54,17 @@ public:
         }
         _callbacks.emplace(fn);
         redisAsyncCommand(_context, redis_callback, this, command.c_str());
+        return true;
+    }
+
+    bool send_request(const std::string& command)
+    {
+        if (nullptr == _context || command.empty()) {
+            return false;
+        }
+        _callbacks.emplace([](redisReply*) {});
+        redisAsyncCommand(_context, redis_callback, this, command.c_str());
+        return true;
     }
 
 private:

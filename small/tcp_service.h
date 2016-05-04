@@ -34,14 +34,7 @@ public:
         _service_map.emplace(name, service);
     }   
 
-    Service* find_service(const std::string& name) {
-        auto itr = _service_map.find(name);
-        if (itr == _service_map.end()) {
-            return &_base_service;
-        }   
- 
-        return itr->second;
-    }
+    Service* find_service(const std::string& name);
 
 protected:
     bool prepare() override;

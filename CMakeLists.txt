@@ -20,17 +20,21 @@ INCLUDE_DIRECTORIES(public
                     redis
                     http
                     small
-                    authorize)
+                    authorize
+                    business)
 
 SET(SRC_LIST public/sockets.cpp
              public/ssl.cpp
+             public/md5.cpp
              http/http_parser.cpp
              http/http_message.cpp
              core/loop.cpp
              core/loop_thread.cpp
              redis/redis_proxy.cpp
+             redis/redis_process.cpp
              small/tcp_service.cpp
              authorize/auth_service.cpp
+             business/customer_service.cpp
              server_small.cpp)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++11")

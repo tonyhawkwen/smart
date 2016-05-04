@@ -167,6 +167,9 @@ void RedisProxy::redis_callback(struct redisAsyncContext*, void* r, void* privda
     RedisProxy* pThis = static_cast<RedisProxy*>(privdata);
     auto fn = pThis->_callbacks.front();
     pThis->_callbacks.pop();
+    if (reply->type == REDIS_REPLY_ERROR) {
+        SLOG(DEBUG) << "redis error:" << reply->str;
+    }
     fn(reply);
 }
 

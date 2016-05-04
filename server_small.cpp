@@ -4,6 +4,7 @@
 #include "logging.h"
 #include "tcp_service.h"
 #include "auth_service.h"
+#include "customer_service.h"
 
 using namespace smart;
 
@@ -54,7 +55,9 @@ int main(int argc, char** argv) {
 
     TcpService service;
     AccessService access_service;
+    CustomerService customer_service;
     service.add_service(&access_service,"AccessService");
+    service.add_service(&customer_service,"Customer");
 
     service.run();
 

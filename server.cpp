@@ -4,6 +4,7 @@
 #include "tcp_service.h"
 #include "service_pool.h"
 #include "auth_service.h"
+#include "customer_service.h"
 
 using namespace smart;
 
@@ -52,7 +53,9 @@ int main(int argc, char** argv) {
     }
 
     AccessService access_service;
+    CustomerService customer_service;
     ServicePool::get_instance().add_service(&access_service,"AccessService");
+    ServicePool::get_instance().add_service(&customer_service,"Customer");
     ServicePool::get_instance().run();
 
     TcpService service;
