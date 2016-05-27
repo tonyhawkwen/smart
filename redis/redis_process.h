@@ -15,12 +15,12 @@ void get_mobile_by_token(const std::string& token, T&& fn)
     std::string redis_request("GET TOKEN_");
     redis_request.append(token);
     get_local_redis()->send_request(redis_request,
-        [fn](redisReply* redis_reply) {
+        [func = std::forward<T>(fn)](redisReply* redis_reply) {
             std::string mobile;
             if (redis_reply->type == REDIS_REPLY_STRING) {
                 mobile = redis_reply->str;
             }
-            fn(mobile);
+            func(mobile);
         });
 }
 

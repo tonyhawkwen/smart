@@ -51,8 +51,8 @@ public:
     }
     template<typename S, typename T>
     void add_method(S&& name, T&& func) {
-        _methods.emplace_back(func);
-        _method_map.emplace(name, _methods.size() - 1);
+        _methods.emplace_back(std::forward<T>(func));
+        _method_map.emplace(std::forward<S>(name), _methods.size() - 1);
     }
 
     Method& find_method(const std::string& name) {

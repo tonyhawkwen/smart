@@ -27,7 +27,7 @@ public:
         if (nullptr == _context || commands.empty()) {
             return false;
         }
-        _callbacks.emplace(fn);
+        _callbacks.emplace(std::forward<T>(fn));
         auto cmd_data = new const char*[commands.size()];
         auto cmd_sizes = new size_t[commands.size()];
         for (auto i = 0; i <commands.size(); ++i) {
@@ -52,7 +52,7 @@ public:
         if (nullptr == _context || command.empty()) {
             return false;
         }
-        _callbacks.emplace(fn);
+        _callbacks.emplace(std::forward<T>(fn));
         redisAsyncCommand(_context, redis_callback, this, command.c_str());
         return true;
     }

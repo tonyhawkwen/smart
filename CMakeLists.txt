@@ -37,7 +37,7 @@ SET(SRC_LIST public/sockets.cpp
              business/customer_service.cpp
              server_small.cpp)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++11")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++14")
 ADD_DEFINITIONS(-DELPP_THREAD_SAFE)
 ADD_DEFINITIONS(-DELPP_FORCE_USE_STD_THREAD)
 ADD_DEFINITIONS(-DELPP_NO_DEFAULT_LOG_FILE)

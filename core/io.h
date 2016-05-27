@@ -24,9 +24,9 @@ public:
     }
 
     template<typename T>
-    void on_read(T&& func) { _read_func = func; }
+    void on_read(T&& func) { _read_func = std::forward<T>(func); }
     template<typename T>
-    void on_write(T&& func) { _write_func = func; }
+    void on_write(T&& func) { _write_func = std::forward<T>(func); }
     int fd() { return _fd; }
     void set_fd(int fd) { _fd = fd; }
     int events() { return _events; }

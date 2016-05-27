@@ -29,6 +29,11 @@ void CustomerService::init() {
                 redis_request.emplace_back("name");
                 redis_request.emplace_back(itr_name->get<std::string>());
             }
+            auto itr_company = request->find("company");
+            if (itr_company != request->end()) {
+                redis_request.emplace_back("company");
+                redis_request.emplace_back(itr_company->get<std::string>());
+            }
             auto itr_income = request->find("income");
             if (itr_income != request->end()) {
                 redis_request.emplace_back("income");
@@ -36,7 +41,7 @@ void CustomerService::init() {
             }
             auto itr_loans = request->find("has_loans");
             if (itr_loans != request->end()) {
-                redis_request.emplace_back("loans");
+                redis_request.emplace_back("has_loans");
                 redis_request.emplace_back(itr_loans->get<std::string>());
             }
             if (!get_local_redis()->connected()) {
@@ -55,6 +60,58 @@ void CustomerService::init() {
                         (*reply)["message"] = "success";
                         return;
                     }
+                }
+                (*reply)["code"] = static_cast<int>(ErrCode::SYSTEM_ERROR);
+                (*reply)["message"] = "system error";
+            });
+        });
+    });
+
+    add_method("GetBaseInfo", [](const shared_json& request, shared_json& reply, SControl& ctrl) {
+        auto itr = request->find("token");
+        if (itr == request->end()) {
+            (*reply)["code"] = static_cast<int>(ErrCode::PARAM_ERROR); 
+            (*reply)["message"] = "miss required param: token";
+            return;
+        }
+
+        get_mobile_by_token(itr->get<std::string>(), 
+            [request, reply, ctrl](const std::string& mobile) {
+            if (mobile.empty()) {
+                (*reply)["code"] = static_cast<int>(ErrCode::LOGIN_ERR);
+                (*reply)["message"] = "token is wrong";
+                return;
+            }
+
+            std::vector<std::string> redis_request;
+            redis_request.emplace_back("HGETALL");
+            redis_request.emplace_back(mobile);
+
+            if (!get_local_redis()->connected()) {
+                (*reply)["code"] = static_cast<int>(ErrCode::SYSTEM_ERROR);
+                (*reply)["message"] = "connect redis fail";
+                return ;
+            }
+
+            get_local_redis()->send_request(redis_request, 
+                [reply, ctrl](redisReply* redis_reply){
+                if (redis_reply->type == REDIS_REPLY_ARRAY) {
+                    std::string key;
+                    for (auto i = 0; i < redis_reply->elements; ++i) {
+                        if (key.empty()) {
+                            key = redis_reply->element[i]->str;
+                            continue;
+                        } else if (key == "password") {
+                            key = "";
+                            continue;
+                        }
+                        SLOG(WARNING) << " key:" << key;
+                        (*reply)[key] = redis_reply->element[i]->str;
+                        key = "";
+                    }
+                    (*reply)["code"] = static_cast<int>(ErrCode::OK);
+                    (*reply)["message"] = "success";
+                    return;
                 }
                 (*reply)["code"] = static_cast<int>(ErrCode::SYSTEM_ERROR);
                 (*reply)["message"] = "system error";
