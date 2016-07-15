@@ -35,6 +35,7 @@ SET(SRC_LIST public/sockets.cpp
              small/tcp_service.cpp
              authorize/auth_service.cpp
              business/customer_service.cpp
+             business/smart_service.cpp
              server_small.cpp)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++14")

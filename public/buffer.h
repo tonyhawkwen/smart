@@ -6,6 +6,7 @@
 #include <sys/uio.h>
 #include <string.h>
 #include <openssl/ssl.h>
+#include <iomanip>
 #include "logging.h"
 
 namespace smart {
@@ -361,6 +362,13 @@ public:
         return append(ref.first, ref.second);
     }
 
+    size_t append(const Buffer& other, size_t size)
+    {
+        //TO DO:not efficient when in _read_buffer case
+        std::pair<const unsigned char*, size_t> ref = other.str();
+        return append(ref.first, ref.second > size ? size : ref.second);
+    }
+
     size_t append(const char* other)
     {
         return append((const unsigned char*)other, strlen(other));
@@ -656,7 +664,7 @@ public:
         os << "write:" << buf.write_index() << "\n";
         for (auto itr = buf.begin(); itr != buf.end(); ++itr)
         {
-            os << *itr;
+            os << std::hex << (size_t)*itr;
         }
         return os;
     }

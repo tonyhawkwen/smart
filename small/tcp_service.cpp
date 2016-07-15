@@ -7,6 +7,8 @@
 #include "loop.h"
 #include "logging.h"
 
+#include "smart_service.h"
+
 namespace smart {
 
 Service::Method Service::_default_method = 
@@ -24,6 +26,7 @@ Service* TcpService::find_service(const std::string& name) {
  
     return itr->second;
 }
+
 bool TcpService::prepare()
 {
     _ssl_ctx = rpc::create_ssl_context();
@@ -102,11 +105,12 @@ bool TcpService::prepare()
                 auto response = std::make_shared<json>();
                 auto ctrl = std::make_shared<Control>(letter, response);
                 try {
+                    SLOG(INFO) << "begin to call method: " << letter.second->get_service_name()
+                               << " " << letter.second->get_method_name();
+
                     auto request = std::make_shared<json>(
                             json::parse(letter.second->content()));
         
-                    SLOG(INFO) << "begin to call method: " << letter.second->get_service_name()
-                               << " " << letter.second->get_method_name();
                     find_service(letter.second->get_service_name())
                         ->find_method(letter.second->get_method_name())(request, response, ctrl);
                 } catch (std::exception& ex) {
@@ -123,6 +127,15 @@ bool TcpService::prepare()
                        << "] port[" << info->inet_addr.port <<"]";
             if (info->i_buffer.writable_bytes() == 0) {
                 parse_http_message(info);
+            }
+            
+            //temp for smart gateway
+            unsigned char header[2] = {0, 0};
+            auto nr = recv(info->io->fd(), header, 2, MSG_PEEK);
+            if (nr >= 2 && header[0] == 0xEB && header[1] == 0x90) {
+                SmartService service;
+                service.parse(info);
+                return;
             }
 
             if (rpc::SslCheck::UNKNOWN == info->is_ssl) {
@@ -162,7 +175,6 @@ bool TcpService::prepare()
                 _conn_map.erase(info->io->fd());
                 return;
             }
-            LOG(INFO) << "recieve buffer:\n" << info->i_buffer;
  
             parse_http_message(info);
         });
